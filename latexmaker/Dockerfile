@@ -15,6 +15,7 @@ RUN apt update && apt -y install \
 RUN apt update && apt -y install \
     texlive-fonts-extra \
     texlive-lang-spanish \
+    python-pygments \
     && rm -rf /var/lib/apt/lists/*
 
 # Extra tools to generate the project
