@@ -18,11 +18,6 @@ RUN apt update && apt -y install \
     python-pygments \
     && rm -rf /var/lib/apt/lists/*
 
-# Extra tools to generate the project
-RUN apt update && apt -y install \
-    plantuml \
-    make \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /doc
-
+ENTRYPOINT [ "latexmk" ]
+CMD [ "-shell-escape", "-pdf", "document.tex" ]
