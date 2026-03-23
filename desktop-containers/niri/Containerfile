@@ -1,0 +1,27 @@
+FROM docker.io/library/archlinux:latest
+
+RUN pacman -Syu --noconfirm && pacman -S --noconfirm \
+    cage wayvnc wlr-randr niri foot fuzzel alacritty sudo \
+    ttf-dejavu \
+    && pacman -Scc --noconfirm
+
+# Strip file capabilities for rootless podman
+RUN setcap -r /usr/bin/cage 2>/dev/null; true
+
+RUN useradd -m testuser && echo "testuser:test" | chpasswd && \
+    echo "testuser ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/testuser
+
+COPY niri-config.kdl /home/testuser/.config/niri/config.kdl
+RUN chown -R testuser:testuser /home/testuser
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+USER testuser
+ENV XDG_RUNTIME_DIR=/tmp/runtime-testuser
+ENV WLR_BACKENDS=headless
+ENV WLR_LIBINPUT_NO_DEVICES=1
+
+EXPOSE 5900
+
+CMD ["/usr/local/bin/entrypoint.sh"]

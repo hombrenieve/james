@@ -14,3 +14,4 @@ Disposable desktop environments running in Podman containers, accessible via VNC
 
 Available tests:
 - **sway** — Headless sway tiling WM on Arch Linux
+- **niri** — Niri scrollable-tiling compositor on Arch Linux

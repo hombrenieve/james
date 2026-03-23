@@ -18,27 +18,48 @@ Podman must be installed and working (rootless mode is fine).
 desktop-containers/
 ├── connect.sh          # Shared VNC connect script
 ├── README.md
-└── sway/               # Sway tiling WM test
+├── sway/               # Sway tiling WM test
+│   ├── Containerfile
+│   ├── entrypoint.sh
+│   └── sway-config
+└── niri/               # Niri scrollable-tiling compositor test
     ├── Containerfile
     ├── entrypoint.sh
-    └── sway-config
+    └── niri-config.kdl
 ```
 
 Each subfolder contains a self-contained desktop test with its own `Containerfile`.
 
 ## Running a test
 
-### Build
+### Sway
 
 ```sh
 cd sway
 podman build -t arch-sway-test .
+podman run -d --name sway-test -p 5900:5900 --security-opt label=disable arch-sway-test
 ```
 
-### Start
+Open a terminal remotely:
 
 ```sh
-podman run -d --name sway-test -p 5900:5900 --security-opt label=disable arch-sway-test
+podman exec sway-test swaymsg exec foot
+```
+
+### Niri
+
+Niri uses Smithay (not wlroots), so it runs nested inside cage as a headless Wayland compositor.
+
+```sh
+cd niri
+podman build -t arch-niri-test .
+podman run -d --name niri-test -p 5900:5900 --security-opt label=disable arch-niri-test
+```
+
+Open a terminal remotely:
+
+```sh
+podman exec niri-test sh -c 'NIRI_SOCKET=$(ls /tmp/runtime-testuser/niri.*.sock) niri msg action spawn -- foot'
 ```
 
 ### Connect
@@ -51,29 +72,23 @@ From the project root:
 ./connect.sh 5901
 ```
 
-### Interact remotely
-
-Open a terminal inside the running session:
-
-```sh
-podman exec sway-test swaymsg exec foot
-```
-
 ### Dispose
 
 ```sh
-podman stop sway-test && podman rm sway-test
+podman stop <name> && podman rm <name>
 ```
 
 Remove the image too if no longer needed:
 
 ```sh
-podman rmi arch-sway-test
+podman rmi <image-name>
 ```
 
-## Sway shortcuts
+## Shortcuts
 
-The modifier key is `Alt` (to avoid conflicts with the host GNOME desktop).
+The modifier key is `Alt` for all tests (to avoid conflicts with the host GNOME desktop).
+
+### Sway
 
 | Shortcut              | Action              |
 |-----------------------|---------------------|
@@ -91,6 +106,23 @@ The modifier key is `Alt` (to avoid conflicts with the host GNOME desktop).
 | Alt + Shift + C       | Reload config       |
 | Alt + Shift + E       | Exit sway           |
 
+### Niri
+
+| Shortcut              | Action              |
+|-----------------------|---------------------|
+| Alt + Enter           | Open terminal       |
+| Alt + D               | App launcher (fuzzel) |
+| Alt + Shift + Q       | Close window        |
+| Alt + H/L             | Focus column left/right |
+| Alt + J/K             | Focus window/workspace down/up |
+| Alt + Shift + H/L     | Move column left/right |
+| Alt + Shift + J/K     | Move window down/up |
+| Alt + 1-5             | Switch workspace    |
+| Alt + Shift + 1-5     | Move window to workspace |
+| Alt + F               | Maximize column     |
+| Alt + Shift + Space   | Toggle floating     |
+| Alt + Shift + E       | Quit niri           |
+
 ## Adding a new desktop test
 
 1. Create a new subfolder (e.g. `hyprland/`)
@@ -100,4 +132,5 @@ The modifier key is `Alt` (to avoid conflicts with the host GNOME desktop).
    - Strip file capabilities if needed: `setcap -r /usr/bin/<binary>`
    - Use `wayvnc` to expose the display over VNC (no auth by default)
    - Create `XDG_RUNTIME_DIR` before starting the compositor
+   - For non-wlroots compositors (e.g. niri), run nested inside `cage`
 4. Build and run following the same pattern above
