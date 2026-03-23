@@ -1,0 +1,36 @@
+FROM docker.io/library/archlinux:latest
+
+RUN pacman -Syu --noconfirm && pacman -S --noconfirm \
+    sway wayvnc foot openssl socat \
+    ttf-dejavu \
+    && pacman -Scc --noconfirm
+
+# Strip file capabilities that don't work in rootless containers
+RUN setcap -r /usr/bin/sway 2>/dev/null; true
+
+RUN useradd -m testuser
+
+# Sway config
+COPY sway-config /home/testuser/.config/sway/config
+
+# wayvnc config: no auth
+RUN mkdir -p /home/testuser/.config/wayvnc && \
+    openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+        -keyout /home/testuser/key.pem -out /home/testuser/cert.pem \
+        -subj /CN=localhost && \
+    printf 'address=0.0.0.0\nenable_auth=false\nprivate_key_file=/home/testuser/key.pem\ncertificate_file=/home/testuser/cert.pem\n' \
+        > /home/testuser/.config/wayvnc/config && \
+    chown -R testuser:testuser /home/testuser
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+USER testuser
+ENV XDG_RUNTIME_DIR=/tmp/runtime-testuser
+ENV WLR_BACKENDS=headless
+ENV WLR_LIBINPUT_NO_DEVICES=1
+ENV SWAYSOCK=/tmp/sway-ipc.sock
+
+EXPOSE 5900
+
+CMD ["/usr/local/bin/entrypoint.sh"]
